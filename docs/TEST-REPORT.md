@@ -1,5 +1,34 @@
 # Teststand vom 15. Oktober 2026
 
+## PaperDock 0.2.1: WLAN-Einrichtung in der App
+
+Bei der echten Benutzerinstallation war das WLAN-Modul vorhanden, aber noch
+keine Scanneradresse gespeichert. Nach lokaler Einrichtung und vollständigem
+Neustart wurden beide logischen iX1300-Einzüge erkannt. Dabei wurde kein neuer
+Hardware-Scan ausgeführt.
+
+0.2.1 ergänzt eine deutliche Meldung bei fehlender Adresse und den Bereich
+**Setup → Scanner / WLAN**. Speichern aktiviert die Konfiguration unmittelbar
+für die nächste Gerätesuche; USB-Backends und bereits gespeicherte Adressen
+bleiben erhalten. Es gibt keine automatische Suche nach IP-Adressen im Netz.
+
+- **133 automatisierte Tests bestanden**, ohne übersprungene Tests, einschließlich
+  lokaler HTTP-Integration. Neue Prüfungen betreffen Einrichtung ohne Adresse,
+  Speichern/Ändern/Deaktivieren, ungültige Eingaben, beschädigte Einstellungen,
+  Wiederherstellung nach Schreibfehlern, erhaltene USB-Konfiguration und
+  Sperren während Scanneraktivität.
+- Browserablauf mit ausschließlich simuliertem Scanner: fehlende Adresse,
+  abgewiesene öffentliche IP, erfolgreiches Speichern mit sofortiger Erkennung,
+  Adressänderung, Deaktivieren und Erhalt der Adresse nach Browser-Neuladen.
+- Helles und dunkles Design sowie der Dialog bei 390 Pixel Breite geprüft;
+  keine horizontale Überbreite. Es wurde kein echter Scanner angesprochen.
+- Isolierte Offline-Neuinstallation und anschließendes Update mit echten
+  Installationsschritten bestanden, einschließlich WLAN-Treiberbuild und
+  installierten Startern. Eine zuvor gespeicherte synthetische Adresse blieb
+  beim Update erhalten. Keine Systempakete wurden verändert; keine
+  Geräteabfrage oder Scannerverbindung wurde dafür ausgeführt.
+- Wheel und Quellpaket erfolgreich gebaut und auf vollständigen Inhalt geprüft.
+
 ## PaperDock 0.2.0: Dokumentfunktionen und Community-Installer
 
 - **113 automatisierte Tests bestanden** im vollständigen Lauf: bisherige
@@ -41,7 +70,7 @@ einem frischen Rechner müssen noch gemeinsam geprüft werden.
 ## Öffentliche Community-Alpha
 
 Das Repository [designshot/paperdock](https://github.com/designshot/paperdock)
-ist veröffentlicht. Das von GitHub heruntergeladene Quellarchiv enthielt alle
+ist veröffentlicht. Das erste von GitHub heruntergeladene Quellarchiv (0.2.0) enthielt alle
 52 vorgesehenen Dateien, bytegenau identisch mit dem lokalen Veröffentlichungsstand.
 Private Scans, lokale Einstellungen und Zugangsdaten sind nicht enthalten.
 

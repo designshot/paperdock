@@ -53,19 +53,34 @@ App automatisch den Browser.
 
 ## WLAN einrichten
 
-Die private IPv4-Adresse des Scanners steht beispielsweise in der Geräteliste
-des Routers. Sie lässt sich bei der Installation mit `--scanner-ip` übergeben
-oder anschließend speichern:
+Nach der Installation **Setup → Scanner / WLAN** öffnen. Fehlt die Adresse,
+zeigt die App einen Einrichtungs-Hinweis direkt bei der Scannerwahl.
+
+1. Den Scanner aufklappen, WLAN einschalten und auf die blaue Anzeige warten.
+2. Die private IPv4-Adresse aus der Geräteliste des Routers eintragen.
+3. Die Adresse speichern und nach Geräten suchen. Die neue Konfiguration gilt
+   unmittelbar; ein Neustart ist bei Änderungen in der App nicht nötig.
+
+Die WLAN-Einrichtung benötigt die über den Community-Installer eingerichtete
+App samt WLAN-Modul. Ein reines Python-Wheel enthält diesen Treiber nicht.
+Ein leeres Adressfeld deaktiviert die zusätzliche WLAN-Konfiguration; USB
+bleibt verfügbar. Die App speichert nur eine lokale Scanneradresse, kein
+WLAN-Passwort. Eine DHCP-Reservierung im Router verhindert Adressänderungen.
+Das Speichern allein startet keinen Scan. Während eines Scans oder einer
+Geräteabfrage lässt sich die Konfiguration nicht ändern.
+
+Alternativ lässt sich die Adresse bei der Installation mit `--scanner-ip`
+übergeben oder über den Kommandozeilenhelfer speichern:
 
 ```sh
 paperdock-wifi 192.168.1.40
 ```
 
-Die Adresse im Beispiel ersetzen. Der Helfer speichert nur die Konfiguration;
-die App kontaktiert den Scanner erst bei ihrer Geräteerkennung bzw. einem Scan.
-Eine DHCP-Reservierung im Router verhindert spätere Adressänderungen. Nach einer
-Änderung PaperDock neu starten. `paperdock-wifi --show` zeigt die gespeicherte
-Adresse; `paperdock-wifi --disable` schaltet die WLAN-Erweiterung ab.
+Die Beispieladresse ersetzen. Bei diesem externen Helfer anschließend PaperDock
+vollständig beenden und über das Anwendungsmenü neu starten; Browser-Neuladen
+reicht nicht. `paperdock-wifi --show` zeigt die gespeicherte Adresse,
+`paperdock-wifi --disable` deaktiviert die WLAN-Erweiterung beim nächsten Start.
+Bereits gespeicherte Adressen bleiben bei einem Update erhalten.
 
 Der Treiber unterstützt derzeit iX1300, Interface 16, Farbe/300 dpi und
 automatische Papiergröße. Details und Hardwaregrenzen stehen in [WLAN.md](WLAN.md).

@@ -38,8 +38,12 @@ Der zusätzliche Treiber steht unter **GPL-2.0-or-later WITH SANE-exception**. P
 ## Installation und Einrichtung
 
 Der [Community-Installer](INSTALL.md) richtet SANE, die App und den zusätzlich
-gebauten WLAN-Treiber im Benutzerkonto ein. Die Scanneradresse wird lokal über
-`paperdock-wifi <private IPv4-Adresse>` gesetzt. Danach PaperDock neu starten.
+gebauten WLAN-Treiber im Benutzerkonto ein. Ab 0.2.1 wird die Scanneradresse
+lokal unter **Setup → Scanner / WLAN** eingetragen. Fehlt sie, zeigt die App
+einen Einrichtungs-Hinweis. Speichern und erneut nach Geräten suchen; Änderungen
+in der App benötigen keinen Neustart. Für die alternative Einrichtung über
+`paperdock-wifi <private IPv4-Adresse>` ist weiterhin ein vollständiger
+App-Neustart nötig. Einzelheiten stehen in der [Installationsanleitung](INSTALL.md).
 Der WLAN-Schalter am Scanner muss auf ON stehen; beim geprüften WLAN-Test war
 USB abgezogen. Der Installer startet keinen Scan und verändert keine Firmware.
 
