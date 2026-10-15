@@ -35,9 +35,22 @@ Noch offen: echte apt-Erstinstallation auf einem frischen zweiten Rechner,
 Debian-12/13- und weitere Ubuntu-/Pop!_OS-Installationen, vollständiger nativer
 GTK-Fensterablauf, Ausrichtung vielfältiger echter Belege sowie die unten
 aufgeführten Hardwarefälle. Es gibt noch kein Flatpak. Der Internet-Bootstrap
-kann erst nach Veröffentlichung von `designshot/paperdock` gegen das öffentliche
-Repository geprüft werden. CI-Dateien sind vorbereitet, aber noch nicht auf
-GitHub ausgeführt.
+gegen das öffentliche Repository und die vollständige Erstinstallation auf
+einem frischen Rechner müssen noch gemeinsam geprüft werden.
+
+## Öffentliche Community-Alpha
+
+Das Repository [designshot/paperdock](https://github.com/designshot/paperdock)
+ist veröffentlicht. Das von GitHub heruntergeladene Quellarchiv enthielt alle
+52 vorgesehenen Dateien, bytegenau identisch mit dem lokalen Veröffentlichungsstand.
+Private Scans, lokale Einstellungen und Zugangsdaten sind nicht enthalten.
+
+Der erste [GitHub-Actions-Lauf](https://github.com/designshot/paperdock/actions/runs/38660409598)
+für Commit `fa129501bd14d3565a2ead6ccf06d4b271efdfaa` war vollständig erfolgreich:
+Python-Tests mit 3.10, 3.12 und 3.13 auf Ubuntu 24.04, JavaScript- und
+Shell-Prüfungen, Installer-Probelauf sowie Bau und Inhaltsprüfung von Wheel
+und Quellpaket. Diese Prüfungen verwenden keinen echten Scanner und ersetzen
+keine Erstinstallation oder Hardwaretests.
 
 ## Historischer Ausgangsstand 0.1.0
 
