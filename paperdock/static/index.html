@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173c37">
+  <meta name="color-scheme" content="light dark">
+  <title>PaperDock · Dein Papier. Gut aufgehoben.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Zum Arbeitsbereich</a>
+  <div class="app-shell">
+    <nav class="rail" aria-label="Hauptnavigation">
+      <a class="brand-mark" href="/" aria-label="PaperDock Startseite"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 7h10a6 6 0 0 1 0 12h-4v7H8z" fill="currentColor"/><path d="M14 12h4a1 1 0 0 1 0 2h-4z" fill="#173c37"/><path d="m23 21 3 3-3 3" fill="none" stroke="#e9b888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      <div class="rail-top">
+        <button class="rail-button active" id="nav-studio" aria-label="Scan-Studio" aria-current="page" title="Scan-Studio"><span data-icon="layers"></span><span>Studio</span></button>
+        <button class="rail-button" id="nav-documents" aria-label="Zu den Dokumenten" title="Dokumente"><span data-icon="folder"></span><span>Ablage</span></button>
+      </div>
+      <div class="rail-bottom">
+        <button class="rail-button" data-open-settings aria-label="Allgemeine Einstellungen und Paperless-Verbindung" title="Einstellungen"><span data-icon="settings"></span><span>Setup</span></button>
+        <div class="local-dot" title="Lokal auf deinem Rechner"><span></span><span>LOCAL</span></div>
+      </div>
+    </nav>
+
+    <div class="app-body">
+      <header class="topbar">
+        <div class="wordmark">PaperDock<span class="version-tag">COMMUNITY</span></div>
+        <div class="topbar-right">
+          <span class="privacy-note"><span data-icon="shield"></span>Dein Rechner. Deine Dokumente.</span>
+          <div class="theme-control">
+            <label for="theme-select"><span class="theme-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor" stroke="none"/></svg></span><span class="theme-label">Design</span></label>
+            <select id="theme-select"><option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option></select>
+          </div>
+          <button id="connection-button" class="connection-pill" data-open-settings data-settings-tab="paperless"><span class="status-dot"></span><span id="connection-label">Paperless verbinden</span><span data-icon="arrow-up-right"></span></button>
+        </div>
+      </header>
+
+      <main id="workspace" tabindex="-1">
+        <div class="workspace-header">
+          <div><p class="eyebrow">WENIGER PAPIER. MEHR PLATZ.</p><h1>Dein Scan-Studio<span class="heading-dot">.</span></h1><p class="workspace-subtitle">Vom Papierstapel direkt in deine digitale Ablage.</p></div>
+          <div class="workspace-actions"><button class="button button-secondary" id="demo-button"><span data-icon="sparkles"></span>Demo ausprobieren</button><button class="button button-primary" id="scan-button"><span data-icon="scan"></span>Scan starten<span data-icon="arrow-right"></span></button></div>
+        </div>
+
+        <div class="workspace-grid">
+          <aside class="document-panel" aria-label="Gescannte Dokumente">
+            <div class="panel-heading"><h2>Dokumente <span id="job-count" class="count-badge">0</span></h2><span data-icon="inbox" class="muted-icon"></span></div>
+            <div class="document-list" id="job-list" role="list"></div>
+            <div class="list-empty" id="list-empty"><div class="empty-folder"><span data-icon="folder"></span></div><strong>Platz für Neues.</strong><p>Deine Scans landen hier.<br>Alles an einem Ort.</p></div>
+            <div class="scanner-card"><div class="scanner-card-icon"><span data-icon="scanner"></span></div><div><span class="eyebrow">SCANNER</span><strong id="scanner-summary">Geräte werden gesucht</strong><p id="scanner-detail">SANE · lokaler Zugriff</p></div><span class="scanner-led" id="scanner-led"></span></div>
+            <div class="local-footnote"><span data-icon="lock"></span> Dateispeicherung lokal</div>
+          </aside>
+
+          <section class="preview-panel" aria-label="Dokumentvorschau">
+            <div class="preview-header"><div class="preview-heading"><span data-icon="file"></span><h2 id="preview-title">Dein nächstes Dokument</h2><span id="demo-badge" class="demo-badge" hidden>DEMO</span></div><span id="page-counter" class="page-counter">Noch keine Seiten</span></div>
+            <div id="job-status" class="job-status" role="status" hidden></div>
+            <div class="orientation-actions" id="orientation-actions" hidden>
+              <div class="orientation-buttons"><button class="button button-secondary" id="auto-orient-page"><span data-icon="sparkles"></span>Diese Seite ausrichten</button><button class="text-button" id="auto-orient-job">Alle Seiten ausrichten</button></div>
+              <p class="orientation-feedback" id="page-orientation-status" role="status"></p>
+              <button class="text-button" id="restore-orientation" hidden><span data-icon="rotate"></span>Ausrichtung dieser Seite zurücksetzen</button>
+            </div>
+            <div class="preview-canvas" id="preview-canvas">
+              <div class="welcome" id="welcome">
+                <div class="paper-illustration" aria-hidden="true">
+                  <div class="illustration-orbit orbit-one"></div><div class="illustration-orbit orbit-two"></div>
+                  <div class="illustration-sheet sheet-back"></div>
+                  <div class="illustration-sheet sheet-front"><div class="sheet-symbol"><span data-icon="leaf"></span></div><div class="sheet-line line-wide"></div><div class="sheet-line"></div><div class="sheet-line line-short"></div><div class="sheet-divider"></div><div class="sheet-line line-wide"></div><div class="sheet-line"></div><div class="sheet-line line-short"></div><div class="sheet-stamp"><span data-icon="check"></span></div></div>
+                  <div class="illustration-spark spark-left">+</div><div class="illustration-spark spark-right">+</div><div class="scan-line"></div><div class="illustration-tag"><span data-icon="check"></span> Gut aufgehoben.</div>
+                </div>
+                <p class="eyebrow">DEIN PAPIER HAT EIN NEUES ZUHAUSE</p><h2>Papier rein.<br>Überblick raus.</h2><p>Scannen, sortieren, wiederfinden.<br>Und mit einem Klick zu Paperless.</p>
+                <button class="text-button" id="welcome-demo">Mit einem Beispieldokument entdecken <span data-icon="arrow-right"></span></button>
+              </div>
+              <div id="loading-preview" class="loading-preview" hidden><span class="loading-spinner"></span><h3>Dein Dokument entsteht.</h3><p>Neue Seiten erscheinen hier, sobald sie bereit sind.</p><button class="button button-secondary" id="cancel-scan">Scan abbrechen</button></div>
+              <div class="page-wrap" id="page-wrap" hidden><img id="page-image" alt="Vorschau der ausgewählten gescannten Seite" draggable="false"></div>
+              <div class="empty-pages" id="empty-pages" hidden><span data-icon="file"></span><h3>Keine Seiten vorhanden</h3><p id="empty-pages-description">Starte einen neuen Scan, um ein Dokument zu erstellen.</p></div>
+              <div class="preview-tools" id="preview-tools" hidden><button class="icon-button" id="rotate-page" aria-label="Seite um 90 Grad drehen" title="Seite drehen"><span data-icon="rotate"></span></button><span class="tool-divider"></span><button class="icon-button" id="zoom-out" aria-label="Vorschau verkleinern" title="Verkleinern"><span data-icon="minus"></span></button><button class="zoom-value" id="zoom-reset" title="An Ansicht anpassen">100 %</button><button class="icon-button" id="zoom-in" aria-label="Vorschau vergrößern" title="Vergrößern"><span data-icon="plus"></span></button><span class="tool-divider"></span><button class="icon-button danger-hover" id="delete-page" aria-label="Ausgewählte Seite löschen" title="Seite löschen"><span data-icon="trash"></span></button></div>
+            </div>
+            <div class="page-strip" id="page-strip" hidden><div class="thumbnail-list" id="thumbnail-list" aria-label="Seiten auswählen und sortieren"></div><div class="page-order-controls"><button class="icon-button" id="page-left" aria-label="Seite nach vorne verschieben" title="Seite nach vorne"><span data-icon="chevron-left"></span></button><button class="icon-button" id="page-right" aria-label="Seite nach hinten verschieben" title="Seite nach hinten"><span data-icon="chevron-right"></span></button></div></div>
+            <div class="preview-footer"><span><span data-icon="shield"></span> Lokal verarbeitet. Bewusst verbunden.</span><span id="document-format">PDF · für deine Ablage</span></div>
+          </section>
+
+          <aside class="inspector" aria-label="Scan- und Export-Einstellungen">
+            <div class="panel-heading"><h2>Scan-Einstellungen</h2><span data-icon="sliders" class="muted-icon"></span></div>
+            <div class="inspector-scroll">
+              <section class="settings-section"><label class="field-label" id="profile-label">DEIN WORKFLOW</label><div id="profile-list" class="profile-list" role="group" aria-labelledby="profile-label"></div></section>
+              <section class="settings-section device-section"><div class="label-row"><label for="device" class="field-label">SCANNER</label><button class="icon-button small" id="refresh-devices" aria-label="Scanner neu suchen" title="Scanner neu suchen"><span data-icon="refresh"></span></button></div><select id="device" aria-describedby="device-warning"><option value="">Scanner werden gesucht …</option></select><p class="field-hint" id="device-warning">Erkannte Geräte werden über SANE angesprochen.</p></section>
+              <section class="settings-section"><label class="field-label" for="document-title">NAME FÜR DEN NÄCHSTEN SCAN <span class="optional">optional</span></label><input id="document-title" maxlength="200" placeholder="Automatisch: Datum und Uhrzeit" autocomplete="off" aria-describedby="next-name-hint"><p class="field-hint" id="next-name-hint">Leer lassen, um Datum und Uhrzeit als Namen zu verwenden.</p><button class="text-button" data-open-settings data-settings-tab="general">Namensvorlage ändern <span data-icon="settings"></span></button><div class="field-row"><div><label class="field-label" for="resolution">AUFLÖSUNG</label><select id="resolution"><option value="150">150 dpi</option><option value="200">200 dpi</option><option value="300" selected>300 dpi</option><option value="600">600 dpi</option></select></div><div><label class="field-label" for="mode">FARBMODUS</label><select id="mode"><option value="Color">Farbe</option><option value="Gray">Graustufen</option><option value="Lineart">Schwarzweiß</option></select></div></div><label class="field-label" for="source">EINZUG</label><select id="source"><option value="ADF Duplex">Beidseitig (Duplex)</option><option value="ADF Front">Einseitig</option><option value="Flatbed">Flachbett</option></select><div class="paper-size-field"><label class="field-label" for="paper-size">PAPIERFORMAT</label><select id="paper-size" aria-describedby="paper-size-hint" disabled><option value="Driver">Treiberstandard</option></select><p class="field-hint" id="paper-size-hint">Verfügbare Formate werden vom Scanner gelesen.</p></div><div class="page-limit-row"><label for="page-limit">Maximale Seitenzahl</label><input id="page-limit" type="number" min="1" max="100" value="50" inputmode="numeric"></div></section>
+              <section class="settings-section orientation-section"><div class="section-caption"><span data-icon="sparkles"></span><h3>Automatisch richtig herum</h3></div><p class="field-hint" id="auto-orient-summary">Verfügbarkeit der Ausrichtung wird geprüft.</p><button class="text-button" data-open-settings data-settings-tab="general">Ausrichtung einstellen <span data-icon="settings"></span></button></section>
+              <section class="settings-section output-section"><div id="job-title-fields" class="job-title-fields" hidden><label class="field-label" for="job-title">NAME DIESES DOKUMENTS</label><input id="job-title" maxlength="200" autocomplete="off" aria-describedby="job-title-hint"><div class="rename-row"><p class="field-hint" id="job-title-hint">Auch dein PDF erhält diesen Namen.</p><button class="text-button" id="rename-job" disabled>Namen speichern <span data-icon="check"></span></button></div></div><div class="section-caption"><span data-icon="file-check"></span><h3>Bereit für die Ablage</h3></div><div class="output-format"><div class="pdf-file-icon">PDF</div><div><strong>Ein Dokument. Alle Seiten.</strong><p>Vorschau prüfen, dann exportieren.</p></div></div><button class="button button-export" id="export-button" disabled><span data-icon="download"></span>PDF herunterladen</button></section>
+              <section class="settings-section paperless-section"><div class="paperless-heading"><div class="paperless-brand"><span data-icon="leaf"></span><h3>Paperless-ngx</h3></div><span class="integration-badge" id="integration-badge">NICHT VERBUNDEN</span></div><p class="paperless-description" id="paperless-description">Direkt ins Archiv. Mit Titel, Tags und allem, was dazugehört.</p><button class="text-button" id="setup-paperless" data-open-settings data-settings-tab="paperless">Verbindung einrichten <span data-icon="arrow-up-right"></span></button><div id="paperless-metadata" hidden><label class="field-label" for="paperless-tags">TAGS <span class="optional">optional · Mehrfachauswahl</span></label><select id="paperless-tags" multiple size="3" aria-describedby="tags-hint"></select><p class="field-hint" id="tags-hint">Strg / ⌘ gedrückt halten, um mehrere auszuwählen.</p><label class="field-label" for="paperless-correspondent">KORRESPONDENT</label><select id="paperless-correspondent"><option value="">Automatisch erkennen</option></select><label class="field-label" for="paperless-document-type">DOKUMENTTYP</label><select id="paperless-document-type"><option value="">Automatisch erkennen</option></select></div><button class="button button-paperless" id="upload-button" disabled><span data-icon="upload"></span>An Paperless senden</button><button class="text-button" id="paperless-status-button" hidden>Status bei Paperless prüfen <span data-icon="refresh"></span></button><p id="paperless-job-status" class="field-hint" role="status"></p></section>
+            </div>
+            <div class="inspector-footer"><span class="tiny-dot"></span> Für Linux gemacht. Für alle gedacht.</div>
+          </aside>
+        </div>
+        <footer class="app-footer"><span>PAPERDOCK <span class="footer-separator">/</span> OPEN SOURCE SCAN STUDIO</span><span id="runtime-status">Verbindung zur lokalen Anwendung …</span></footer>
+      </main>
+    </div>
+  </div>
+  <div class="toast-container" id="toasts" role="status" aria-live="polite" aria-atomic="false"></div>
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-title">
+    <div class="dialog-heading"><div><p class="eyebrow">DEIN STUDIO. DEINE EINSTELLUNGEN.</p><h2 id="settings-title">Gut auf dich eingestellt.</h2></div><button type="button" class="icon-button" id="close-settings" aria-label="Einstellungen schließen"><span data-icon="x"></span></button></div>
+    <div class="settings-tabs" role="tablist" aria-label="Einstellungsbereiche"><button type="button" id="settings-tab-general" role="tab" aria-selected="true" aria-controls="preferences-form">Allgemein</button><button type="button" id="settings-tab-paperless" role="tab" aria-selected="false" aria-controls="paperless-form" tabindex="-1">Paperless-ngx</button></div>
+    <form id="preferences-form" role="tabpanel" aria-labelledby="settings-tab-general">
+      <section class="preference-section"><h3>Dokumentnamen</h3><p class="dialog-intro">Lege fest, wie neue Scans heißen. Voreingestellt sind Datum und Uhrzeit. Einen eigenen Titel kannst du vor dem Scan eingeben.</p>
+        <label class="field-label" for="naming-preset">NAMEN AUFBAUEN AUS</label><select id="naming-preset"><option value="Scan_{date}_{time}">Scan · Datum und Uhrzeit</option><option value="{date}_{time}">Datum und Uhrzeit</option><option value="Dokument_{date}_{counter}">Dokument · Datum und Nummer</option><option value="custom">Eigene Vorlage</option></select>
+        <div id="custom-template-field" hidden><label class="field-label" for="naming-template">EIGENE NAMENSVORLAGE</label><input id="naming-template" maxlength="120" value="Scan_{date}_{time}" autocomplete="off" spellcheck="false" required aria-describedby="template-hint"><p class="field-hint" id="template-hint">Du kannst {date} für das Datum, {time} für die Uhrzeit und {counter} für eine fortlaufende Nummer einsetzen.</p></div>
+        <div class="name-preview"><span class="field-label">SO KANN DEIN PDF HEISSEN</span><output id="naming-preview" for="naming-preset naming-template"></output></div><p class="field-hint">Datum, Uhrzeit und Nummer werden beim Scan eingesetzt. Vorhandene Dokumente behalten ihren Namen.</p>
+      </section>
+      <section class="preference-section"><h3>Seiten automatisch ausrichten</h3><label class="check-option" for="auto-orient-preference"><input id="auto-orient-preference" type="checkbox" checked><span>Neue Scans automatisch richtig drehen</span></label><p class="field-hint" id="orientation-setting-hint">Die Schreibrichtung wird lokal erkannt. Bei unsicherer Erkennung bleibt die Seite unverändert.</p></section>
+      <p class="dialog-feedback" id="preferences-feedback" role="status"></p><div class="dialog-actions preferences-actions"><button type="submit" class="button button-primary" id="save-preferences">Allgemeine Einstellungen speichern <span data-icon="check"></span></button></div>
+    </form>
+    <form id="paperless-form" role="tabpanel" aria-labelledby="settings-tab-paperless" hidden>
+      <p class="dialog-intro">Verbinde deine eigene Paperless-ngx-Instanz. Scans werden erst übertragen, wenn du sie sendest.</p><label class="field-label" for="paperless-url">SERVER-ADRESSE</label><input id="paperless-url" type="url" placeholder="https://paperless.example.de" autocomplete="url" required><label class="field-label" for="paperless-token">API-TOKEN</label><div class="password-field"><input id="paperless-token" type="password" placeholder="Deinen API-Token einfügen" autocomplete="off" spellcheck="false"><button type="button" class="icon-button" id="toggle-token" aria-label="API-Token anzeigen"><span data-icon="eye"></span></button></div><p class="field-hint">Den Token findest du in Paperless unter „Mein Profil“. Ein leeres Feld behält den bereits gespeicherten Token.</p><div class="connection-info"><span data-icon="lock"></span><p>Der Token wird lokal gespeichert und nur für Anfragen an deinen Paperless-Server verwendet. Nutze HTTPS für Verbindungen über das Internet.</p></div><p class="dialog-feedback" id="settings-feedback" role="status"></p><div class="dialog-actions"><button type="button" class="button button-secondary" id="test-paperless"><span data-icon="plug"></span>Verbindung testen</button><button type="submit" class="button button-primary" id="save-settings">Paperless speichern <span data-icon="check"></span></button></div>
+    </form>
+  </dialog>
+</body>
+</html>
