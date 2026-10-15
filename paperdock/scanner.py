@@ -85,14 +85,14 @@ def _stop_process(process: subprocess.Popen) -> None:
         process.wait(timeout=2)
 
 
-def _run_control(arguments: list[str], timeout: float) -> tuple[int, str, str]:
+def _run_control(arguments: list[str], timeout: float, environment: dict | None = None) -> tuple[int, str, str]:
     """Run a non-scanning query with a bounded lifetime and C locale."""
     try:
         process = subprocess.Popen(
             [_executable(), *arguments], stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
             encoding="utf-8", errors="replace", shell=False,
-            start_new_session=True, env={**os.environ, "LC_ALL": "C"},
+            start_new_session=True, env={**(os.environ if environment is None else environment), "LC_ALL": "C"},
         )
     except OSError as exc:
         raise ScannerError(f"SANE konnte nicht gestartet werden: {exc}") from exc
@@ -162,10 +162,10 @@ def _add_usb_diagnostics(result: dict) -> dict:
     return result
 
 
-def discover_devices(timeout: float = 15) -> dict:
+def discover_devices(timeout: float = 15, *, environment: dict | None = None) -> dict:
     """Return SANE devices and a warning if discovery is unavailable."""
     try:
-        code, output, error = _run_control([f"--formatted-device-list={DEVICE_FORMAT}"], timeout)
+        code, output, error = _run_control([f"--formatted-device-list={DEVICE_FORMAT}"], timeout, environment)
     except ScannerError as exc:
         return _add_usb_diagnostics({"devices": [], "warning": str(exc)})
     devices = []
@@ -230,10 +230,10 @@ def _parse_options(output: str) -> dict:
     return result
 
 
-def device_options(device: str) -> dict:
+def device_options(device: str, *, environment: dict | None = None) -> dict:
     """Read capabilities; opening a device for help does not acquire images."""
     device = _safe_string(device, "Gerät")
-    code, output, error = _run_control([f"--device-name={device}", "--all-options"], 15)
+    code, output, error = _run_control([f"--device-name={device}", "--all-options"], 15, environment)
     if code:
         raise ScannerError(error.strip()[:1500] or "Scanneroptionen konnten nicht gelesen werden.")
     result = _parse_options(output)
@@ -298,6 +298,8 @@ def scan_pages(
     directory: Path,
     on_page: Callable[[Path], None],
     cancelled: threading.Event,
+    *,
+    environment: dict | None = None,
 ) -> list[Path]:
     """Acquire a batch, reporting only completely written, validated pages.
 
@@ -348,7 +350,7 @@ def scan_pages(
                 process = subprocess.Popen(
                     arguments, cwd=scratch, stdin=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL, stderr=diagnostics, shell=False,
-                    start_new_session=True, env={**os.environ, "LC_ALL": "C"},
+                    start_new_session=True, env={**(os.environ if environment is None else environment), "LC_ALL": "C"},
                 )
             except OSError as exc:
                 raise ScannerError(f"SANE konnte nicht gestartet werden: {exc}") from exc

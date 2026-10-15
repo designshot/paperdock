@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from . import __version__, orientation, scanner
+from . import __version__, orientation, scanner, wifi
 from .document_names import DEFAULT_TEMPLATE, pdf_disposition, render_template, unique_name, validate_template, validate_title
 from .paperless import PaperlessClient, PaperlessError
 
@@ -99,6 +99,7 @@ class Application:
         self.jobs_dir.mkdir(mode=0o700, exist_ok=True)
         self.lock = threading.RLock()
         self.scan_lock = threading.Lock()
+        self.wifi = wifi.WifiSettings.from_environment()
         self.token = secrets.token_urlsafe(32)
         self.jobs = {}
         self.cancellations = {}
@@ -182,7 +183,7 @@ class Application:
     def state(self):
         with self.lock:
             return {'version': __version__, 'jobs': [self.public_job(j) for j in sorted(self.jobs.values(), key=lambda j: j['created_at'], reverse=True)],
-                    'profiles': PROFILES, 'paperless': self.public_config(), 'active_job_id': self.active_job_id,
+                    'profiles': PROFILES, 'paperless': self.public_config(), 'active_job_id': self.active_job_id, 'wifi': self.wifi.state(),
                     **self.preference_state(),
                     'system': {'scanimage': bool(shutil.which('scanimage')), 'pillow': True, 'ocr': False, 'orientation': orientation.available()},
                     'warning': self.startup_warning}
@@ -227,11 +228,43 @@ class Application:
             raise AppError('Bitte zuerst Paperless-Adresse und API-Token in den Einstellungen hinterlegen.')
         return PaperlessClient(self.config['url'], self.config['token'])
 
+    def wifi_state(self):
+        with self.lock:
+            return self.wifi.state()
+
+    def set_wifi(self, body):
+        if set(body) != {'address'} or not isinstance(body.get('address'), str):
+            raise AppError('Bitte ausschließlich eine Scanner-Adresse als Text angeben.')
+        if not self.scan_lock.acquire(blocking=False):
+            raise AppError('Der Scanner ist gerade beschäftigt. Bitte vor einer WLAN-Änderung den Vorgang abschließen oder anhalten.', 409)
+        try:
+            with self.lock:
+                if self.closing:
+                    raise AppError('PaperDock wird gerade beendet.', 409)
+                try:
+                    result = self.wifi.save(body['address'])
+                except ValueError as exc:
+                    raise AppError(str(exc)) from exc
+                except OSError as exc:
+                    raise AppError('Die WLAN-Einstellung konnte nicht gespeichert werden. Bitte Schreibrechte der Installation prüfen.', 500) from exc
+                self.devices = []
+                self.capabilities = {}
+                return result
+        finally:
+            self.scan_lock.release()
+
+    def scanner_environment(self):
+        # Avoid process-global changes; each scanner subprocess gets a snapshot.
+        return {'environment': self.wifi.environment.copy()} if self.wifi.managed else {}
+
     def discover(self):
         if not self.scan_lock.acquire(blocking=False):
             raise AppError('Der Scanner ist gerade beschäftigt.', 409)
         try:
-            result = scanner.discover_devices()
+            result = scanner.discover_devices(**self.scanner_environment())
+            wlan = self.wifi.state()
+            if wlan['available'] and not wlan['configured']:
+                result['warning'] = '\n\n'.join(filter(None, [result.get('warning'), wlan['message']]))
             with self.lock:
                 self.devices = result['devices']
                 known_ids = {d['id'] for d in self.devices}
@@ -241,13 +274,13 @@ class Application:
             self.scan_lock.release()
 
     def options(self, device):
-        with self.lock:
-            if device not in {d['id'] for d in self.devices}:
-                raise AppError('Bitte zuerst nach Scannern suchen und ein erkanntes Gerät auswählen.')
         if not self.scan_lock.acquire(blocking=False):
             raise AppError('Der Scanner ist gerade beschäftigt.', 409)
         try:
-            result = scanner.device_options(device)
+            with self.lock:
+                if device not in {d['id'] for d in self.devices}:
+                    raise AppError('Bitte zuerst nach Scannern suchen und ein erkanntes Gerät auswählen.')
+            result = scanner.device_options(device, **self.scanner_environment())
             with self.lock:
                 self.capabilities[device] = result
             return result
@@ -281,7 +314,7 @@ class Application:
             if any(job['status'] == 'orienting' for job in self.jobs.values()):
                 raise AppError('Bitte die laufende Ausrichtungsprüfung abwarten oder anhalten.', 409)
             if not demo and device not in {d['id'] for d in self.devices}:
-                raise AppError('Kein Scanner ausgewählt. iX1300 bitte per USB anschließen und Geräte aktualisieren.')
+                raise AppError('Kein Scanner ausgewählt. Bitte USB verbinden oder WLAN in den Einstellungen einrichten und Geräte aktualisieren.')
             if not demo and paper_size != 'Driver':
                 if not re.match(r'^ADF(?:\s|$)', source, re.IGNORECASE) or paper_size not in self.capabilities.get(device, {}).get('paper_sizes', []):
                     raise AppError('Dieses Papierformat ist für den gewählten Einzug nicht bestätigt. Bitte Scanneroptionen neu laden oder Treiberstandard wählen.')
@@ -337,7 +370,7 @@ class Application:
                         break
                     on_page(page)
             else:
-                scanner.scan_pages(job['device'], job['settings'], folder, on_page, cancel)
+                scanner.scan_pages(job['device'], job['settings'], folder, on_page, cancel, **self.scanner_environment())
             with self.lock:
                 if cancel.is_set():
                     job['error'] = 'Scan angehalten. Bereits erfasste Seiten bleiben erhalten.'
@@ -742,6 +775,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.json(app.settings(body))
                 if path == '/api/preferences':
                     return self.json(app.set_preferences(body))
+                if path == '/api/wifi':
+                    return self.json(app.set_wifi(body))
                 if path == '/api/paperless/test':
                     return self.json(app.client().test_connection())
                 match = re.fullmatch(r'/api/jobs/([a-f0-9]{32})/([a-z-]+)', path)
@@ -764,6 +799,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json(app.state())
             if path == '/api/preferences':
                 return self.json(app.preference_state())
+            if path == '/api/wifi':
+                return self.json(app.wifi_state())
             if path == '/api/devices':
                 return self.json(app.discover())
             if path == '/api/device-options':
