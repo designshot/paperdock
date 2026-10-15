@@ -1,0 +1,21 @@
+name: Fehler / Bug
+description: A reproducible problem in PaperDock.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem, Schritte und erwartetes Ergebnis
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Umgebung
+      description: "PaperDock-Version/Commit, Distribution, Installationsweg, Scanner und Verbindung."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Bereinigte Fehlermeldung oder Screenshot mit Beispieldaten
+      description: "Keine Zugangsdaten, privaten Adressen, Seriennummern oder echten Dokumente veröffentlichen."
