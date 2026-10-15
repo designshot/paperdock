@@ -31,6 +31,7 @@
     x: '<path d="m6 6 12 12M6 18 18 6"/>',
     eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     plug: '<path d="M8 3v5M16 3v5M5 8h14M7 8v4a5 5 0 0 0 10 0V8M12 17v5"/>',
+    wifi: '<path d="M3 8a15 15 0 0 1 18 0M6 12a10 10 0 0 1 12 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r=".7" fill="currentColor"/>',
     alert: '<path d="m12 3 10 18H2L12 3Z"/><path d="M12 9v5M12 17h.01"/>',
     photo: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/>',
     receipt: '<path d="M5 3 8 5l4-2 4 2 3-2v18l-3-2-4 2-4-2-3 2V3Z"/><path d="M9 9h6M9 13h6M9 17h3"/>'
@@ -52,6 +53,9 @@
   const orientationWarnings = new Set(["uncertain", "unavailable", "timeout", "invalid", "error"]);
   const orientationAvailable = () => !!state.data?.system?.orientation;
   const preferences = () => ({ auto_orient: true, naming_template: "Scan_{date}_{time}", ...state.data?.preferences });
+  const settingsTabs = ["general", "paperless", "wifi"];
+  const settingsPanels = { general: "preferences-form", paperless: "paperless-form", wifi: "wifi-form" };
+  const scannerBusy = () => state.optionsLoading || ["scan", "orient", "devices"].some((key) => state.busy.has(key)) || !!state.data?.jobs?.some(running);
   function sampleName(template) {
     const now = new Date();
     const pad = (value) => String(value).padStart(2, "0");
@@ -124,9 +128,9 @@
     }), 1100);
   }
   function render() {
-    renderJobs(); renderProfiles(); renderPaperless(); renderPreferences(); renderPreview(); renderControls();
+    renderJobs(); renderProfiles(); renderPaperless(); renderPreferences(); renderWifi(); renderPreview(); renderControls();
     const system = state.data?.system || {};
-    $("runtime-status").textContent = `v${state.data?.version || "0.2.0"} · ${system.scanimage ? "SANE bereit" : "SANE nicht verfügbar"} · ${system.pillow === false ? "PDF-Modul nicht verfügbar" : "Lokal verbunden"}`;
+    $("runtime-status").textContent = `v${state.data?.version || "0.2.1"} · ${system.scanimage ? "SANE bereit" : "SANE nicht verfügbar"} · ${system.pillow === false ? "PDF-Modul nicht verfügbar" : "Lokal verbunden"}`;
   }
   function renderPreferences() {
     const preview = state.data?.name_preview || sampleName(preferences().naming_template);
@@ -135,6 +139,23 @@
     $("auto-orient-summary").textContent = !orientationAvailable()
       ? "Automatisches Ausrichten ist noch nicht verfügbar. Die lokale Orientierungserkennung muss installiert sein. Manuelles Drehen bleibt möglich."
       : preferences().auto_orient ? "Neue Scans werden automatisch ausgerichtet. Unsichere Seiten bleiben unverändert und erhalten einen Hinweis." : "Automatisches Ausrichten ist ausgeschaltet. Du kannst einzelne Seiten weiterhin in der Vorschau ausrichten.";
+  }
+  function renderWifi() {
+    const wifi = state.data?.wifi;
+    $("wifi-setup-notice").hidden = !wifi;
+    const title = !wifi ? "WLAN-Status nicht verfügbar" : !wifi.available ? "WLAN hier nicht einrichtbar" : wifi.configured ? "WLAN-Adresse gespeichert" : "Deine WLAN-Adresse fehlt noch";
+    const description = !wifi ? "Die Anwendung stellt die WLAN-Einrichtung noch nicht bereit." : !wifi.available ? wifi.message || "Für WLAN wird eine PaperDock-Installation mit zusätzlichem ScanSnap-Treiber benötigt." : wifi.configured ? `Gespeichert: ${wifi.address}. Die Gerätesuche prüft, ob dein Scanner erreichbar ist.` : "Der WLAN-Treiber ist bereit. Trage die IP-Adresse deines Scanners ein, damit PaperDock ihn finden kann.";
+    $("wifi-setup-title").textContent = title;
+    $("wifi-setup-description").textContent = description;
+    $("wifi-status-title").textContent = title;
+    $("wifi-status-description").textContent = description;
+    $("wifi-setup-notice").classList.toggle("needs-setup", !!wifi?.available && !wifi.configured);
+    $("wifi-connection-status").classList.toggle("unavailable", !wifi?.available);
+    $("setup-wifi").replaceChildren(document.createTextNode(!wifi?.available ? "WLAN-Details ansehen " : wifi.configured ? "WLAN-Adresse ändern " : "WLAN einrichten "), icon("arrow-right"));
+  }
+  function compatibilityText() {
+    if (isWirelessScanSnap()) return "Experimenteller WLAN-Treiber: Farbe mit 300 dpi. Papiergröße und Zuschnitt werden automatisch erkannt. ADF und Return Path sind getrennte Geräte.";
+    return state.data?.wifi?.available ? "USB-Scanner werden weiterhin über SANE gesucht. WLAN kannst du hier über die Scanner-Adresse einrichten." : "USB über SANE; WLAN benötigt einen zusätzlichen experimentellen Treiber.";
   }
   function renderJobs() {
     const jobs = state.data?.jobs || [];
@@ -301,10 +322,10 @@
     const job = selectedJob(); const pages = pagesOf(job); const index = pages.findIndex((page) => page.id === state.selectedPage);
     const anyScan = state.data?.jobs?.some((item) => ["scanning", "queued", "orienting"].includes(item.status));
     const starting = state.busy.has("scan") || state.busy.has("orient"); const editing = ["edit", "export", "upload", "orient", "rename"].some((key) => state.busy.has(key));
-    const loadingScanner = state.busy.has("devices") || state.optionsLoading;
+    const loadingScanner = state.busy.has("devices") || state.optionsLoading || state.busy.has("wifi");
     $("scan-button").disabled = !state.connected || !$("device").value || !state.options || loadingScanner || anyScan || starting;
     $("scan-button").title = !$("device").value ? "Verbinde deinen Scanner und suche erneut nach SANE-Geräten." : loadingScanner ? "Scanneroptionen werden geladen. Bitte einen Moment warten." : !state.options ? "Scanneroptionen fehlen. Bitte erneut nach Scannern suchen." : "Mit den gewählten Einstellungen scannen";
-    $("demo-button").disabled = $("welcome-demo").disabled = !state.connected || starting || anyScan;
+    $("demo-button").disabled = $("welcome-demo").disabled = !state.connected || starting || anyScan || state.busy.has("wifi");
     $("refresh-devices").disabled = loadingScanner || !!anyScan;
     $("export-button").disabled = !pages.length || running(job) || state.busy.has("export") || editing;
     $("upload-button").disabled = !state.data?.paperless?.configured || !pages.length || locked(job) || state.busy.has("upload") || editing;
@@ -320,9 +341,14 @@
     $("cancel-scan").hidden = !["scanning", "queued", "orienting"].includes(job?.status);
     $("zoom-out").disabled = state.zoom <= .6;
     $("zoom-in").disabled = state.zoom >= 2;
-    ["device", "resolution", "mode", "source", "page-limit"].forEach((id) => { $(id).disabled = !!anyScan || starting; });
+    ["device", "resolution", "mode", "source", "page-limit"].forEach((id) => { $(id).disabled = !!anyScan || starting || state.busy.has("wifi"); });
     $("paper-size").disabled = !!anyScan || starting || !/^ADF(?:\s|$)/i.test($("source").value) || paperSizesAvailable().length < 2;
     document.querySelectorAll(".profile-button").forEach((button) => { button.disabled = !!anyScan || starting || state.optionsLoading || button.dataset.unsupported === "true"; });
+    const wifiSaving = state.busy.has("wifi"); const wifiBlocked = scannerBusy();
+    $("save-wifi").disabled = !state.connected || !state.data?.wifi?.available || wifiSaving || wifiBlocked;
+    $("wifi-address").disabled = !state.data?.wifi?.available || wifiSaving;
+    $("wifi-busy-hint").hidden = !wifiSaving && !wifiBlocked;
+    $("wifi-busy-hint").textContent = wifiSaving ? "WLAN-Einstellung wird übernommen und die Gerätesuche läuft …" : "Bitte warte, bis die laufende Verarbeitung oder Gerätesuche abgeschlossen ist. Danach kannst du die WLAN-Adresse speichern.";
   }
   function sourceLabel(source) {
     if (/duplex/i.test(source)) return source + " · beidseitig";
@@ -348,7 +374,7 @@
         $("scanner-summary").textContent = "Gerätesuche nicht abgeschlossen";
         $("scanner-detail").textContent = "Suche über ↻ wiederholen";
         $("scanner-led").classList.remove("connected");
-        $("compatibility-note").textContent = "USB über SANE; WLAN benötigt einen zusätzlichen experimentellen Treiber.";
+        $("compatibility-note").textContent = compatibilityText();
         const temporarilyUnavailable = /beschäftigt/i.test(error.message);
         const message = temporarilyUnavailable ? "Die Gerätesuche ist gerade nicht verfügbar. Bitte kurz warten und erneut suchen." : error.message;
         $("device-warning").textContent = temporarilyUnavailable ? message : `${message} Bitte die Gerätesuche erneut starten.`;
@@ -357,21 +383,24 @@
       }
       state.devices = data.devices || [];
       const previous = $("device").value;
-      const placeholder = node("option", "", state.devices.length ? "Scanner auswählen" : "Kein Scanner erkannt"); placeholder.value = "";
+      const missingWifiAddress = state.data?.wifi?.available && !state.data.wifi.configured;
+      const placeholder = node("option", "", state.devices.length ? "Scanner auswählen" : missingWifiAddress ? "WLAN-Adresse noch nicht eingerichtet" : "Kein Scanner erkannt"); placeholder.value = "";
       $("device").replaceChildren(placeholder, ...state.devices.map((device) => { const option = node("option", "", [device.vendor, device.model].filter(Boolean).join(" ") || device.id); option.value = device.id; return option; }));
       $("device").value = state.devices.some((device) => device.id === previous) ? previous : state.devices[0]?.id || "";
-      $("device-warning").textContent = data.warning || (state.devices.length ? "Gerät über SANE verfügbar. Optionen werden vom Treiber gelesen." : "Kein Gerät über SANE gefunden. Scanner verbinden und erneut suchen.");
+      $("device-warning").textContent = data.warning || (state.devices.length ? "Gerät über SANE verfügbar. Optionen werden vom Treiber gelesen." : missingWifiAddress ? "Für deinen WLAN-Scanner fehlt noch die IP-Adresse. Richte WLAN unten ein. USB-Scanner wurden bereits gesucht." : state.data?.wifi?.configured ? "Kein Scanner gefunden. Prüfe die gespeicherte WLAN-Adresse, die blaue WLAN-Leuchte und dein Netzwerk. Danach erneut suchen." : "Kein USB-Scanner gefunden. Verbinde einen Scanner oder prüfe unten die Voraussetzungen für WLAN.");
       $("device-warning").classList.toggle("error", !!data.warning);
       updateScannerSummary();
       if ($("device").value) await loadDeviceOptions();
+      else { state.options = null; updatePaperSizes(); }
       return data;
     });
   }
   function updateScannerSummary() {
     const device = state.devices.find((item) => item.id === $("device").value);
-    $("scanner-summary").textContent = device ? device.model || device.vendor || "Scanner bereit" : "Kein Scanner verbunden";
-    $("scanner-detail").textContent = device ? isWirelessScanSnap() ? "WLAN · experimentell" : "SANE bereit" : "SANE-Gerät auswählen";
-    $("compatibility-note").textContent = device && isWirelessScanSnap() ? "Experimenteller WLAN-Treiber: Farbe mit 300 dpi. Papiergröße und Zuschnitt werden automatisch erkannt. ADF und Return Path sind getrennte Geräte." : "USB über SANE; WLAN benötigt einen zusätzlichen experimentellen Treiber.";
+    const missingWifiAddress = state.data?.wifi?.available && !state.data.wifi.configured;
+    $("scanner-summary").textContent = device ? device.model || device.vendor || "Scanner bereit" : missingWifiAddress ? "WLAN-Adresse fehlt" : "Kein Scanner gefunden";
+    $("scanner-detail").textContent = device ? isWirelessScanSnap() ? "WLAN · experimentell" : "SANE bereit" : missingWifiAddress ? "Unter Setup WLAN einrichten" : state.data?.wifi?.configured ? "WLAN-Adresse und Verbindung prüfen" : "USB verbinden oder WLAN prüfen";
+    $("compatibility-note").textContent = compatibilityText();
     $("scanner-led").classList.toggle("connected", !!device);
     renderControls();
   }
@@ -507,11 +536,11 @@
     finally { state.busy.delete("metadata"); }
   }
   function showSettingsTab(tab, focus = false) {
-    ["general", "paperless"].forEach((name) => {
+    settingsTabs.forEach((name) => {
       const selected = name === tab;
       const button = $("settings-tab-" + name);
       button.setAttribute("aria-selected", String(selected)); button.tabIndex = selected ? 0 : -1;
-      $(name === "general" ? "preferences-form" : "paperless-form").hidden = !selected;
+      $(settingsPanels[name]).hidden = !selected;
       if (selected && focus) button.focus();
     });
   }
@@ -551,6 +580,44 @@
     } catch (error) { $("preferences-feedback").classList.add("error"); $("preferences-feedback").textContent = error.message; }
     finally { state.busy.delete("preferences"); $("save-preferences").disabled = false; }
   }
+  async function saveWifi() {
+    if (state.busy.has("wifi")) return;
+    $("wifi-feedback").classList.remove("error");
+    if (!state.connected || !state.data?.wifi?.available || scannerBusy()) {
+      $("wifi-feedback").textContent = scannerBusy() ? "Bitte warte, bis die laufende Verarbeitung oder Gerätesuche abgeschlossen ist." : state.data?.wifi?.message || "Die WLAN-Einrichtung ist gerade nicht verfügbar.";
+      $("wifi-feedback").classList.add("error");
+      return;
+    }
+    const address = $("wifi-address").value.trim();
+    if (!$("wifi-form").reportValidity()) return;
+    state.busy.add("wifi"); renderControls();
+    $("wifi-feedback").textContent = "WLAN-Einstellung wird gespeichert …";
+    try {
+      const wifi = await api("/api/wifi", { address });
+      if (state.data) state.data.wifi = wifi;
+      $("wifi-address").value = wifi.address || "";
+      state.options = null; state.deviceRequest += 1;
+      renderWifi(); updatePaperSizes();
+      $("wifi-feedback").textContent = wifi.configured ? "Adresse gespeichert. PaperDock sucht jetzt nach Scannern …" : "WLAN ausgeschaltet. PaperDock sucht jetzt nach USB-Scannern …";
+      await refreshState();
+      const result = await refreshDevices();
+      const foundWifi = state.devices.some((device) => device.id.startsWith("scansnap:net:"));
+      if (!result) {
+        $("wifi-feedback").classList.add("error");
+        $("wifi-feedback").textContent = `Einstellung gespeichert. ${$("device-warning").textContent}`;
+      } else if (wifi.configured && !foundWifi) {
+        $("wifi-feedback").classList.add("error");
+        $("wifi-feedback").textContent = "Adresse gespeichert, aber kein WLAN-Scanner gefunden. Prüfe die Adresse im Router, die blaue WLAN-Leuchte und ob Rechner und Scanner im selben Netzwerk sind. Danach erneut suchen.";
+      } else if (state.devices.length && !state.options) {
+        $("wifi-feedback").classList.add("error");
+        $("wifi-feedback").textContent = `Scanner gefunden. ${$("device-warning").textContent}`;
+      } else {
+        $("wifi-feedback").textContent = wifi.configured ? "WLAN-Scanner gefunden. Du kannst den passenden Einzug in den Scan-Einstellungen auswählen. Es wurde kein Scan gestartet." : state.devices.length ? "WLAN ausgeschaltet. USB-Scanner gefunden und weiterhin verfügbar." : "WLAN ausgeschaltet. Zurzeit wurde kein USB-Scanner gefunden. Du kannst ihn jederzeit verbinden und erneut suchen.";
+      }
+    } catch (error) {
+      $("wifi-feedback").classList.add("error"); $("wifi-feedback").textContent = error.message;
+    } finally { state.busy.delete("wifi"); renderControls(); }
+  }
   function openSettings(tab = "general") {
     $("paperless-url").value = state.data?.paperless?.url || "";
     $("paperless-token").value = ""; $("paperless-token").type = "password";
@@ -558,7 +625,9 @@
     $("paperless-token").placeholder = state.data?.paperless?.configured ? "Token gespeichert · leer lassen zum Beibehalten" : "Deinen API-Token einfügen";
     $("settings-feedback").textContent = ""; $("settings-feedback").classList.remove("error");
     $("preferences-feedback").textContent = ""; $("preferences-feedback").classList.remove("error");
-    fillPreferenceForm(); showSettingsTab(tab); $("settings-dialog").showModal();
+    $("wifi-address").value = state.data?.wifi?.address || "";
+    $("wifi-feedback").textContent = ""; $("wifi-feedback").classList.remove("error");
+    fillPreferenceForm(); renderWifi(); renderControls(); showSettingsTab(tab); $("settings-dialog").showModal();
   }
   async function saveSettings(testOnly = false) {
     if (!$("paperless-form").reportValidity()) return;
@@ -607,13 +676,14 @@
   $("upload-button").onclick = uploadDocument;
   $("paperless-status-button").onclick = () => action("paperless-status", async () => { const job = selectedJob(); if (!job) return; await api(`/api/jobs/${encodeURIComponent(job.id)}/paperless-status`, {}); await refreshState(); toast("Paperless-Status aktualisiert."); });
   document.querySelectorAll("[data-open-settings]").forEach((button) => button.addEventListener("click", () => openSettings(button.dataset.settingsTab || "general")));
-  ["general", "paperless"].forEach((name) => {
+  settingsTabs.forEach((name, index) => {
     const button = $("settings-tab-" + name);
     button.onclick = () => showSettingsTab(name);
     button.onkeydown = (event) => {
       if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
         event.preventDefault();
-        showSettingsTab(event.key === "Home" ? "general" : event.key === "End" ? "paperless" : name === "general" ? "paperless" : "general", true);
+        const target = event.key === "Home" ? 0 : event.key === "End" ? settingsTabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + settingsTabs.length) % settingsTabs.length;
+        showSettingsTab(settingsTabs[target], true);
       }
     };
   });
@@ -626,6 +696,7 @@
   };
   $("naming-template").addEventListener("input", () => updateNamingPreview());
   $("preferences-form").onsubmit = (event) => { event.preventDefault(); savePreferences(); };
+  $("wifi-form").onsubmit = (event) => { event.preventDefault(); saveWifi(); };
   $("close-settings").onclick = () => $("settings-dialog").close();
   $("settings-dialog").addEventListener("close", () => { $("paperless-token").value = ""; });
   $("settings-dialog").addEventListener("click", (event) => { if (event.target === $("settings-dialog")) { const rect = event.target.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) event.target.close(); } });

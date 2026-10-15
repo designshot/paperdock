@@ -433,6 +433,12 @@ main { max-width: 1920px; margin: auto; padding: 32px 32px 0; }
 .field-hint { margin-top: 10px; color: var(--text-muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .field-hint.error { color: var(--danger-text); }
 .compatibility-note { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--warning-border); border-left: 3px solid var(--warning-dot); border-radius: 0 8px 8px 0; background: var(--warning-bg); color: var(--warning-text); font-size: 13px; line-height: 1.7; }
+.wifi-setup-notice { margin-top: 16px; padding: 15px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); }
+.wifi-setup-notice.needs-setup { border-color: var(--brand-border); background: var(--brand-soft); }
+.wifi-notice-heading { display: flex; align-items: flex-start; gap: 9px; color: var(--text); font-size: 14px; line-height: 1.6; }
+.wifi-notice-heading svg { width: 19px; height: 19px; margin-top: 2px; color: var(--brand-text); }
+.wifi-setup-notice p { margin-top: 8px; color: var(--text-secondary); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.wifi-setup-notice .text-button { margin-top: 5px; max-width: 100%; text-align: left; }
 .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
 .paper-size-field { margin-top: 20px; }
 .page-limit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 19px; }
@@ -491,7 +497,7 @@ main { max-width: 1920px; margin: auto; padding: 32px 32px 0; }
 .dialog-heading .icon-button { margin: -12px -12px 0 0; }
 .dialog-intro { margin: 22px 0 26px; color: var(--text-secondary); font-size: 15px; line-height: 1.8; }
 .settings-tabs { display: flex; gap: 6px; margin: 25px 0 24px; padding: 5px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-alt); }
-.settings-tabs button { flex: 1; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 15px; font-weight: 650; }
+.settings-tabs button { flex: 1; min-width: 0; min-height: 44px; padding: 10px 6px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 650; line-height: 1.5; white-space: normal; }
 .settings-tabs button[aria-selected="true"] { border-color: var(--brand-border); background: var(--brand-soft); color: var(--brand-text); box-shadow: var(--shadow-soft); }
 .settings-tabs button:hover { background: var(--surface-hover); }
 .preference-section + .preference-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
@@ -515,6 +521,18 @@ main { max-width: 1920px; margin: auto; padding: 32px 32px 0; }
 .connection-info p { color: var(--success-text); font-size: 13px; line-height: 1.8; }
 .dialog-actions { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); }
 .preferences-actions .button { width: 100%; white-space: normal; }
+.wifi-connection-status { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--brand-border); border-radius: 10px; background: var(--brand-soft); }
+.wifi-connection-status > span[data-icon] { margin-top: 3px; color: var(--brand-text); }
+.wifi-connection-status strong { display: block; font-size: 15px; line-height: 1.6; }
+.wifi-connection-status p { margin-top: 6px; color: var(--text-secondary); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.wifi-connection-status.unavailable { border-color: var(--warning-border); background: var(--warning-bg); }
+.wifi-connection-status.unavailable strong, .wifi-connection-status.unavailable p, .wifi-connection-status.unavailable > span[data-icon] { color: var(--warning-text); }
+.wifi-help { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; line-height: 1.8; }
+.wifi-help h4 { margin: 0; color: var(--text); font-size: 15px; font-weight: 650; }
+.wifi-help ol { margin: 12px 0; padding-left: 22px; }
+.wifi-help li + li { margin-top: 8px; }
+.wifi-help p { font-size: 13px; }
+.wifi-actions .button { width: 100%; white-space: normal; }
 .dialog-feedback { margin-top: 18px; color: var(--success-text); font-size: 14px; line-height: 1.7; }
 .dialog-feedback:empty { margin: 0; }
 .dialog-feedback.error { color: var(--danger-text); }
