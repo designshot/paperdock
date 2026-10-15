@@ -1,0 +1,11 @@
+PaperDock
+Copyright 2026 designshot and PaperDock contributors
+
+This software originates from the PaperDock project by designshot.
+Project source: https://github.com/designshot/paperdock
+
+PaperDock is an independent Linux scanning application. It is not affiliated
+with Fujitsu, PFU, Ricoh or the Paperless-ngx project.
+
+The separate experimental ScanSnap Wi-Fi driver retains its own upstream
+copyrights and license; see THIRD_PARTY_NOTICES.md and drivers/scansnap-wifi/.

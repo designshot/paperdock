@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paperdock-local"
+version = "0.2.0"
+description = "A local Linux scanning workspace with Paperless-ngx integration"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+dependencies = ["Pillow>=10.0"]
+
+[project.urls]
+Homepage = "https://github.com/designshot/paperdock"
+Issues = "https://github.com/designshot/paperdock/issues"
+
+[tool.setuptools]
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+
+[project.scripts]
+paperdock = "paperdock.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["paperdock*"]
+
+[tool.setuptools.package-data]
+paperdock = ["static/*"]

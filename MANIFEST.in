@@ -1,0 +1,9 @@
+include LICENSE NOTICE THIRD_PARTY_NOTICES.md README.md CONTRIBUTING.md CHANGELOG.md
+include start.sh install.sh bootstrap.sh
+recursive-include paperdock/static *
+recursive-include docs *.md
+recursive-include tests *.py
+recursive-include scripts *.py *.sh
+recursive-include drivers/scansnap-wifi *
+recursive-include .github *.yml *.md
+global-exclude __pycache__ *.py[cod]
