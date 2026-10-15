@@ -1,0 +1,6 @@
+{
+  "backend/scansnap.c": "71a0b13622e9da2b8e45bd52357c4e00e1a19267bc05e917ca78073ff2c293a3",
+  "backend/scansnap-protocol.c": "c4e49bc0b99e1825f42ce5a46840356a5202b7bb0ca56a741c0043590f808dcf",
+  "tools/scansnap/scansnap_session.py": "f1f8adbee1a5391ea4c131eb38dacee421b23bcbbd4ec030a230376e815ad061",
+  "testsuite/backend/scansnap/test_scansnap_session.py": "96ba44aa9d57e071c38ad2d1f942203396f6a1b3b9f9e422446528e7e877b708"
+}

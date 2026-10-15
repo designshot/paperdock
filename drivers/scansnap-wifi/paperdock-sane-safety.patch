@@ -1,0 +1,270 @@
+diff --git a/backend/scansnap-protocol.c b/backend/scansnap-protocol.c
+index 0a1d05c..8cf3974 100644
+--- a/backend/scansnap-protocol.c
++++ b/backend/scansnap-protocol.c
+@@ -1,4 +1,6 @@
+ /* SPDX-License-Identifier: GPL-2.0-or-later WITH SANE-exception */
++/* Modified for the PaperDock experiment, 2026-10-15: normal release,
++   uncertain-reservation cleanup, rejection diagnostics and Linux timezone. */
+ /* Network protocol used by ScanSnap Home for the iX1300. */
+ 
+ #include "../include/sane/config.h"
+@@ -325,13 +327,24 @@ common_header (uint8_t *packet, size_t length, const SsDevice *device,
+ static int
+ application_command (const SsDevice *device, const uint8_t *request,
+                      size_t request_size, size_t reply_size,
+-                     char *error, size_t error_size)
++                     char *error, size_t error_size,
++                     int *request_may_have_succeeded)
+ {
+   uint8_t reply[32];
++  int32_t status;
++  if (request_may_have_succeeded) *request_may_have_succeeded = 0;
++  if (reply_size > sizeof (reply) || reply_size < 12)
++    {
++      set_error (error, error_size, "invalid application reply size");
++      return -1;
++    }
+   int fd = connect_greet (device, device->application_port, error, error_size);
+   if (fd < 0)
+     return -1;
+-  if (reply_size > sizeof (reply) || write_all (fd, request, request_size) < 0
++  /* A short write or lost reply can leave our reservation active. A normal
++     identity-scoped release is safe; never force another client's release. */
++  if (request_may_have_succeeded) *request_may_have_succeeded = 1;
++  if (write_all (fd, request, request_size) < 0
+       || read_all (fd, reply, reply_size) < 0)
+     {
+       set_error (error, error_size, "application command failed: %s", strerror (errno));
+@@ -339,10 +352,19 @@ application_command (const SsDevice *device, const uint8_t *request,
+       return -1;
+     }
+   close (fd);
+-  if (get_be32 (reply) != reply_size || memcmp (reply + 4, device->magic, 4)
+-      || get_be32 (reply + 8) != 0)
++  if (get_be32 (reply) != reply_size || memcmp (reply + 4, device->magic, 4))
++    {
++      set_error (error, error_size, "invalid application reply framing");
++      return -1;
++    }
++  status = (int32_t) get_be32 (reply + 8);
++  if (status != 0)
+     {
+-      set_error (error, error_size, "application command was rejected");
++      /* A well-framed explicit rejection means we obtained no reservation. */
++      if (request_may_have_succeeded) *request_may_have_succeeded = 0;
++      set_error (error, error_size,
++                 "application command %u was rejected (status %d)",
++                 get_be32 (request + 8), status);
+       return -1;
+     }
+   return 0;
+@@ -355,7 +377,7 @@ ss_session_open (SsSession *session, const SsDevice *device,
+   uint8_t request[128];
+   struct sockaddr_in trigger;
+   time_t now;
+-  struct tm local_tm, utc_tm;
++  struct tm local_tm;
+   long utc_offset;
+ 
+   memset (session, 0, sizeof (*session));
+@@ -379,15 +401,16 @@ ss_session_open (SsSession *session, const SsDevice *device,
+   put_be32 (request + 48, SS_TRIGGER_PORT);
+   now = time (NULL);
+   localtime_r (&now, &local_tm);
+-  gmtime_r (&now, &utc_tm);
+   put_be32 (request + 100, ((uint32_t) (local_tm.tm_year + 1900) << 16)
+             | ((uint32_t) (local_tm.tm_mon + 1) << 8) | local_tm.tm_mday);
+   put_be32 (request + 104, ((uint32_t) local_tm.tm_hour << 24)
+             | ((uint32_t) local_tm.tm_min << 16) | ((uint32_t) local_tm.tm_sec << 8));
+-  utc_offset = (long) difftime (mktime (&utc_tm), mktime (&local_tm));
++  /* This experimental backend's interface identity already requires Linux.
++     tm_gmtoff includes daylight saving time; mktime(gmtime()) does not. */
++  utc_offset = -(long) local_tm.tm_gmtoff;
+   put_be32 (request + 116, (uint32_t) utc_offset);
+   if (application_command (device, request, sizeof (request), 20,
+-                           error, error_size) < 0)
++                           error, error_size, &session->reserved) < 0)
+     goto failed;
+   session->reserved = 1;
+   session->scanner_fd = connect_greet (device, device->scanner_port,
+@@ -788,8 +811,10 @@ ss_session_close (SsSession *session)
+   if (session->reserved)
+     {
+       common_header (request, sizeof (request), &session->device, 18);
+-      put_be32 (request + 24, 1);
+-      application_command (&session->device, request, sizeof (request), 16, NULL, 0);
++      /* Normal release of this client's reservation; never force-release. */
++      put_be32 (request + 24, 0);
++      application_command (&session->device, request, sizeof (request), 16,
++                           NULL, 0, NULL);
+       session->reserved = 0;
+     }
+   if (session->trigger_fd >= 0)
+diff --git a/backend/scansnap.c b/backend/scansnap.c
+index ca541ac..bb7c098 100644
+--- a/backend/scansnap.c
++++ b/backend/scansnap.c
+@@ -1,4 +1,6 @@
+ /* SPDX-License-Identifier: GPL-2.0-or-later WITH SANE-exception */
++/* Modified for the PaperDock experiment, 2026-10-15:
++   keep JPEG decoder state valid across longjmp and clean up failures. */
+ /* sane - Scanner Access Now Easy.
+    Network backend for the ScanSnap iX1300. */
+ 
+@@ -87,6 +89,13 @@ typedef struct
+   char message[JMSG_LENGTH_MAX];
+ } JpegError;
+ 
++typedef struct
++{
++  struct jpeg_decompress_struct info;
++  JpegError error;
++  uint8_t *output;
++} JpegDecode;
++
+ static Device *devices;
+ static const SANE_Device **device_list;
+ static size_t device_count;
+@@ -121,49 +130,63 @@ static SANE_Status
+ decode_jpeg (const SsImage *jpeg, uint8_t **pixels, size_t *size,
+              int *width, int *height, char *message, size_t message_size)
+ {
+-  struct jpeg_decompress_struct info;
+-  JpegError error;
+-  uint8_t *output = NULL;
++  /* Keep all state changed by libjpeg outside this function's automatic
++     variables: their values would be indeterminate after longjmp. */
++  JpegDecode *decode = calloc (1, sizeof (*decode));
+   size_t row_bytes, output_size;
++  int decoded_width, decoded_height;
+ 
+-  memset (&info, 0, sizeof (info));
+-  info.err = jpeg_std_error (&error.standard);
+-  error.standard.error_exit = jpeg_error_exit;
+-  if (setjmp (error.jump))
++  *pixels = NULL;
++  *size = 0;
++  *width = *height = 0;
++  if (!decode)
++    {
++      snprintf (message, message_size, "out of memory creating JPEG decoder");
++      return SANE_STATUS_NO_MEM;
++    }
++  decode->info.err = jpeg_std_error (&decode->error.standard);
++  decode->error.standard.error_exit = jpeg_error_exit;
++  if (setjmp (decode->error.jump))
+     {
+-      jpeg_destroy_decompress (&info);
+-      free (output);
+-      snprintf (message, message_size, "invalid JPEG from scanner: %s", error.message);
++      jpeg_destroy_decompress (&decode->info);
++      free (decode->output);
++      snprintf (message, message_size, "invalid JPEG from scanner: %s",
++                decode->error.message);
++      free (decode);
+       return SANE_STATUS_IO_ERROR;
+     }
+-  jpeg_create_decompress (&info);
+-  jpeg_mem_src (&info, jpeg->data, jpeg->length);
+-  jpeg_read_header (&info, TRUE);
+-  info.out_color_space = JCS_RGB;
+-  jpeg_start_decompress (&info);
+-  if (!info.output_width || !info.output_height || info.output_components != 3
+-      || info.output_width > 20000 || info.output_height > 100000)
+-    ERREXIT (&info, JERR_BAD_STATE);
+-  row_bytes = (size_t) info.output_width * 3;
+-  if (info.output_height > SIZE_MAX / row_bytes)
+-    ERREXIT (&info, JERR_OUT_OF_MEMORY);
+-  output_size = row_bytes * info.output_height;
++  jpeg_create_decompress (&decode->info);
++  jpeg_mem_src (&decode->info, jpeg->data, jpeg->length);
++  jpeg_read_header (&decode->info, TRUE);
++  decode->info.out_color_space = JCS_RGB;
++  jpeg_start_decompress (&decode->info);
++  if (!decode->info.output_width || !decode->info.output_height
++      || decode->info.output_components != 3
++      || decode->info.output_width > 20000 || decode->info.output_height > 100000)
++    ERREXIT (&decode->info, JERR_BAD_STATE);
++  row_bytes = (size_t) decode->info.output_width * 3;
++  if (decode->info.output_height > SIZE_MAX / row_bytes)
++    ERREXIT (&decode->info, JERR_OUT_OF_MEMORY);
++  output_size = row_bytes * decode->info.output_height;
+   if (output_size > 512U * 1024U * 1024U)
+-    ERREXIT (&info, JERR_OUT_OF_MEMORY);
+-  output = malloc (output_size);
+-  if (!output)
+-    ERREXIT (&info, JERR_OUT_OF_MEMORY);
+-  while (info.output_scanline < info.output_height)
++    ERREXIT (&decode->info, JERR_OUT_OF_MEMORY);
++  decode->output = malloc (output_size);
++  if (!decode->output)
++    ERREXIT (&decode->info, JERR_OUT_OF_MEMORY);
++  while (decode->info.output_scanline < decode->info.output_height)
+     {
+-      JSAMPROW row = output + (size_t) info.output_scanline * row_bytes;
+-      jpeg_read_scanlines (&info, &row, 1);
++      JSAMPROW row = decode->output + (size_t) decode->info.output_scanline * row_bytes;
++      jpeg_read_scanlines (&decode->info, &row, 1);
+     }
+-  *width = (int) info.output_width;
+-  *height = (int) info.output_height;
+-  jpeg_finish_decompress (&info);
+-  jpeg_destroy_decompress (&info);
+-  *pixels = output;
++  jpeg_finish_decompress (&decode->info);
++  decoded_width = (int) decode->info.output_width;
++  decoded_height = (int) decode->info.output_height;
++  jpeg_destroy_decompress (&decode->info);
++  *pixels = decode->output;
+   *size = output_size;
++  *width = decoded_width;
++  *height = decoded_height;
++  free (decode);
+   return SANE_STATUS_GOOD;
+ }
+ 
+diff --git a/testsuite/backend/scansnap/test_scansnap_session.py b/testsuite/backend/scansnap/test_scansnap_session.py
+index 6c87a44..40ca41a 100644
+--- a/testsuite/backend/scansnap/test_scansnap_session.py
++++ b/testsuite/backend/scansnap/test_scansnap_session.py
+@@ -1,4 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0-or-later WITH SANE-exception
++# Modified for the PaperDock experiment, 2026-10-15: assert normal release.
+ """Offline iX1300 session packet and cleanup checks."""
+ 
+ from datetime import datetime, timezone, timedelta
+@@ -65,7 +66,7 @@ class SessionTests(unittest.TestCase):
+         release = session.release_request(MAGIC, IDENTITY)
+         self.assertEqual(len(release), 32)
+         self.assertEqual(struct.unpack_from(">I4sII", release), (32, MAGIC, 18, 0))
+-        self.assertEqual(struct.unpack_from(">I", release, 24)[0], 1)
++        self.assertEqual(struct.unpack_from(">II", release, 24), (0, 0))
+         inquiry = session.inquiry_request(MAGIC, IDENTITY)
+         self.assertEqual(len(inquiry), 64)
+         self.assertEqual(struct.unpack_from(">I4sII", inquiry), (64, MAGIC, 1, 0))
+diff --git a/tools/scansnap/scansnap_session.py b/tools/scansnap/scansnap_session.py
+index e54b451..6fedd20 100644
+--- a/tools/scansnap/scansnap_session.py
++++ b/tools/scansnap/scansnap_session.py
+@@ -1,5 +1,6 @@
+ #!/usr/bin/env python3
+ # SPDX-License-Identifier: GPL-2.0-or-later WITH SANE-exception
++# Modified for the PaperDock experiment, 2026-10-15: normal release only.
+ """Experimental iX1300 reserve / INQUIRY / release probe.
+ 
+ No scan, pairing, configuration, firmware, or cloud commands are sent. The
+@@ -50,10 +51,11 @@ def reserve_request(magic, identity, local_ip, trigger_port, now=None):
+     return bytes(packet)
+ 
+ 
+-def release_request(magic, identity, reason=1):
++def release_request(magic, identity):
+     if len(magic) != 4 or len(identity) != 6:
+         raise ValueError("invalid magic or client identity")
+-    return struct.pack(">I4sII6s2xII", 32, magic, 18, 0, identity, reason, 0)
++    # Normal release of this client's reservation; never force-release.
++    return struct.pack(">I4sII6s2xII", 32, magic, 18, 0, identity, 0, 0)
+ 
+ 
+ def inquiry_request(magic, identity, vpd=False):
