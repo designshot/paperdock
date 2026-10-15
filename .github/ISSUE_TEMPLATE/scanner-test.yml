@@ -1,0 +1,67 @@
+name: Scanner testen / Test a scanner
+description: Report a tested scanner, connection and scan mode.
+title: "[Scanner] Hersteller Modell – USB/WLAN"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fürs Testen! Bitte nur erfundene Dokumente verwenden. Keine Scans,
+        Token, Passwörter, Seriennummern, MAC- oder privaten Netzwerkadressen posten.
+        Eine erfolgreiche Erkennung allein ist noch kein erfolgreicher Scan.
+  - type: input
+    id: model
+    attributes:
+      label: Hersteller und genaue Modellnummer / Exact model
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PaperDock-Version oder Commit
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution und Version, Architektur, SANE-Version
+      placeholder: "Ubuntu 24.04, x86_64, scanimage 1.2.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Verbindung / Connection
+      options:
+        - USB
+        - WLAN – regulärer SANE-Treiber
+        - WLAN – experimenteller ScanSnap-Treiber
+        - Netzwerk – anderer Treiber
+    validations:
+      required: true
+  - type: textarea
+    id: scan
+    attributes:
+      label: Getestete Einstellungen / Tested settings
+      description: "Einzug, Simplex/Duplex, Farbe/Grau, Auflösung, Papierformat, Anzahl Blätter/Seiten, Firmware falls bekannt."
+    validations:
+      required: true
+  - type: checkboxes
+    id: results
+    attributes:
+      label: Tatsächlich geprüft / Actually verified
+      options:
+        - label: Gerät erkannt und Optionen geladen
+        - label: Scan vollständig mit korrekter Seitenanzahl
+        - label: Reihenfolge und Vorder-/Rückseiten stimmen
+        - label: PDF außerhalb von PaperDock geöffnet und geprüft
+        - label: Automatische Orientierung mit absichtlich verdrehter Textseite geprüft
+        - label: Zweiter Scan nach normaler Freigabe erfolgreich
+        - label: Abbruch und anschließender neuer Scan geprüft
+        - label: Empfang in Paperless geprüft
+  - type: textarea
+    id: details
+    attributes:
+      label: Ergebnis, Schritte und bereinigte Fehlermeldungen
+      description: "Was funktioniert? Was nicht? Keine vertraulichen Inhalte anhängen."
+    validations:
+      required: true
