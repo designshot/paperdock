@@ -14,7 +14,7 @@ def check(directory):
         with zipfile.ZipFile(path) as archive:
             names = archive.namelist()
             for filename in ('static/index.html', 'static/styles.css', 'static/app.js',
-                             'static/theme.js', 'orientation.py', 'document_names.py'):
+                             'static/theme.js', 'orientation.py', 'document_names.py', 'wifi.py'):
                 assert 'paperdock/' + filename in names, (path, filename)
             for filename in ('LICENSE', 'NOTICE', 'THIRD_PARTY_NOTICES.md'):
                 assert any(name.endswith('/' + filename) for name in names), (path, filename)
@@ -25,7 +25,8 @@ def check(directory):
             names = [entry.name.partition('/')[2] for entry in archive.getmembers()]
             for filename in ('install.sh', 'bootstrap.sh', 'NOTICE', 'THIRD_PARTY_NOTICES.md',
                              'docs/INSTALL.md', 'drivers/scansnap-wifi/build.py',
-                             'drivers/scansnap-wifi/COPYING', 'paperdock/static/theme.js'):
+                             'drivers/scansnap-wifi/COPYING', 'paperdock/static/theme.js', 'paperdock/wifi.py',
+                             'scripts/install_runtime.py'):
                 assert filename in names, (path, filename)
             assert not any(name.startswith(('work/', 'jobs/', '.git/')) or
                            name.endswith(('settings.json', 'preferences.json', '.so'))

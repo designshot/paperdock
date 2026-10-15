@@ -236,7 +236,8 @@ def install(args):
         raise
     print(f"Fertig. Starten: {launcher_paths[0]}")
     if not args.without_wifi and not address:
-        print(f"WLAN einrichten: {launcher_paths[1]} <private Scanner-IP>")
+        print("WLAN einrichten: PaperDock öffnen → Einstellungen → Scanner / WLAN.")
+        print(f"Alternativ: {launcher_paths[1]} <private Scanner-IP>")
     print("Dokumente liegen weiterhin im normalen PaperDock-Datenordner. Es wurde kein Scanner kontaktiert.")
 
 

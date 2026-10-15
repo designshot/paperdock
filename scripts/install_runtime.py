@@ -2,17 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 """User installation launch/setup/uninstall support. No scanner probes."""
 import argparse
-import ipaddress
 import json
 import os
 from pathlib import Path
-import re
-import shlex
 import shutil
 import sys
-import tempfile
 
-MARKER = "paperdock-user-install-v1"
+# The source installer runs before a venv exists. The release launcher instead
+# imports the installed package using its fixed venv interpreter.
+source_root = Path(__file__).resolve().parents[1]
+if (source_root / "paperdock/wifi.py").is_file():
+    sys.path.insert(0, str(source_root))
+from paperdock.wifi import MARKER, atomic_write, launch_environment, sane_environment, scanner_ip, set_wifi
 
 
 def safe_path(value, label="Pfad"):
@@ -25,35 +26,6 @@ def safe_path(value, label="Pfad"):
     return path.resolve()
 
 
-def scanner_ip(value):
-    try:
-        address = ipaddress.IPv4Address(value)
-    except ipaddress.AddressValueError as exc:
-        raise ValueError("Scanner-IP muss eine einzelne IPv4-Adresse sein.") from exc
-    networks = [ipaddress.IPv4Network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
-    if not any(address in net and address not in (net.network_address, net.broadcast_address) for net in networks):
-        raise ValueError("Scanner-IP muss eine private Unicast-Adresse aus 10/8, 172.16/12 oder 192.168/16 sein.")
-    return str(address)
-
-
-def atomic_write(path, content, mode=0o600):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if path.is_symlink():
-        raise ValueError(f"Symbolischer Link als Schreibziel ist nicht erlaubt: {path}")
-    descriptor, temporary = tempfile.mkstemp(prefix=".paperdock-", dir=path.parent)
-    try:
-        os.fchmod(descriptor, mode)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
-
-
 def manifest(prefix):
     path = prefix / "install.json"
     if path.is_symlink():
@@ -62,61 +34,6 @@ def manifest(prefix):
     if data.get("format") != MARKER or data.get("prefix") != str(prefix):
         raise ValueError("Kein gültiger PaperDock-Installationsordner.")
     return data
-
-
-def set_wifi(prefix, value):
-    atomic_write(prefix / "config/wifi.json", json.dumps({"scanner_ip": scanner_ip(value)}) + "\n")
-
-
-def sane_environment(prefix, release, original, system_config=Path("/etc/sane.d")):
-    """Merge active backend lists while preserving each backend's own config."""
-    environment = original.copy()
-    module = release / "wifi/build/lib/libsane-scansnap.so.1"
-    settings = prefix / "config/wifi.json"
-    if not module.is_file() or not settings.is_file():
-        return environment
-    value = json.loads(settings.read_text()).get("scanner_ip")
-    if not value:
-        return environment
-    address = scanner_ip(value)
-    private = prefix / "config/sane"
-    directories = []
-    for entry in [*environment.get("SANE_CONFIG_DIR", "").split(":"), str(system_config)]:
-        if not entry:
-            continue
-        directory = Path(entry).expanduser().resolve()
-        if directory != private and directory not in directories:
-            directories.append(directory)
-    backends = []
-    for directory in directories:
-        configs = [directory / "dll.conf"]
-        extra = directory / "dll.d"
-        if extra.is_dir():
-            configs.extend(p for p in sorted(extra.iterdir())
-                           if p.is_file() and not p.name.startswith(".") and not p.name.endswith(("~", "#")))
-        for config in configs:
-            if not config.is_file():
-                continue
-            for line in config.read_text(errors="replace").splitlines():
-                try:
-                    words = shlex.split(line, comments=True)
-                except ValueError:
-                    continue
-                if not words:
-                    continue
-                name = words[0]
-                if re.fullmatch(r"[A-Za-z0-9_+-]+", name) and name not in ("dll", "scansnap") and name not in backends:
-                    backends.append(name)
-    backends.append("scansnap")
-    atomic_write(private / "dll.conf", "# Generated; system and user backends retained.\n" + "\n".join(backends) + "\n")
-    atomic_write(private / "scansnap.conf", f"net {address}\n")
-    # Empty dll.d makes SANE use the explicit merged list, without reading a
-    # second fragment directory and silently choosing only the first of several.
-    (private / "dll.d").mkdir(exist_ok=True, mode=0o700)
-    environment["SANE_CONFIG_DIR"] = ":".join(map(str, [private, *directories]))
-    prior = environment.get("LD_LIBRARY_PATH", "")
-    environment["LD_LIBRARY_PATH"] = str(module.parent) + (":" + prior if prior else "")
-    return environment
 
 
 def wifi_command(prefix, release, arguments):
@@ -129,7 +46,7 @@ def wifi_command(prefix, release, arguments):
     if args.address and (args.disable or args.show):
         parser.error("Adresse und --disable/--show können nicht kombiniert werden.")
     if args.disable:
-        atomic_write(prefix / "config/wifi.json", '{"scanner_ip": null}\n')
+        set_wifi(prefix, "")
         print("WLAN deaktiviert. USB bleibt verfügbar.")
         return
     if args.show:
@@ -199,7 +116,7 @@ def main():
     elif args.command == "uninstall":
         uninstall(prefix, remaining)
     else:
-        environment = sane_environment(prefix, release, os.environ)
+        environment = launch_environment(prefix, release, os.environ)
         python = release / "venv/bin/python"
         os.execve(str(python), [str(python), "-m", "paperdock", "--desktop", *remaining], environment)
 
