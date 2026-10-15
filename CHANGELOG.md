@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1 — Wi-Fi setup fix
+
+- Show a clear setup hint when the installed Wi-Fi module has no scanner address.
+- Add scanner address settings in the app, with immediate activation and device
+  refresh; no process restart is needed after saving in the app.
+- Preserve existing Wi-Fi configuration and USB backends, validate addresses, and
+  prevent configuration changes during scanning or device queries.
+- Distinguish missing driver, unmanaged launch and unconfigured Wi-Fi states.
+
 ## 0.2.0 — Community alpha
 
 - Local automatic page orientation using Tesseract OSD, conservative confidence

@@ -1,12 +1,13 @@
 # PaperDock
 
-Eine lokale Scan-App für Linux mit moderner Oberfläche und direkter Paperless-ngx-Anbindung. **Version 0.2.0 ist eine Alpha zum Ausprobieren und Weiterentwickeln.** „PaperDock“ ist ein Arbeitstitel; die Verfügbarkeit des Namens wurde noch nicht geprüft. Das Projekt ist unabhängig von Fujitsu, PFU/Ricoh und Paperless-ngx.
+Eine lokale Scan-App für Linux mit moderner Oberfläche und direkter Paperless-ngx-Anbindung. **Version 0.2.1 ist eine Alpha zum Ausprobieren und Weiterentwickeln.** „PaperDock“ ist ein Arbeitstitel; die Verfügbarkeit des Namens wurde noch nicht geprüft. Das Projekt ist unabhängig von Fujitsu, PFU/Ricoh und Paperless-ngx.
 
 **ScanSnap iX1300: USB funktioniert; ein WLAN-Testscan war ebenfalls erfolgreich.** USB wurde mit ADF Front, Farbe, 300 dpi und A4 samt PDF-Export geprüft: 2480 × 3508 Pixel, vollständiges und lesbares Blatt; dafür musste der rückseitige WLAN-Schalter auf **OFF** stehen. WLAN verwendet ein zusätzliches experimentelles SANE-Modul: Eine Vorderseite in Farbe bei 300 dpi mit automatischem Zuschnitt und PDF-Export gelang. Der Installer kann dieses Modul aus dem festgelegten Quellstand bauen; im Python-Wheel ist es nicht enthalten. [Testbericht](docs/TEST-REPORT.md), [WLAN-Treiber und Einschränkungen](docs/WLAN.md).
 
 ## Was die Alpha bereits enthält
 
 - Scanner über SANE suchen und die angebotenen Einzüge, Farbmodi und Auflösungen auslesen.
+- WLAN-Einrichtung direkt in den Einstellungen, mit Hinweis auf eine fehlende Scanneradresse.
 - Profile für Alltag, Belege und Archiv, mit anpassbaren Scanoptionen.
 - Treibervorgabe, A4 und Letter für geeignete ADF-Geräte; feste Formate werden anhand der gemeldeten Papiergrenzen angeboten.
 - Mehrseitige Stapel mit Vorschau, Drehung, Seitenreihenfolge und Entfernen einzelner Seiten.
@@ -49,8 +50,11 @@ experimentellen iX1300-WLAN-Treibers. Für die Systempakete wird `sudo` benötig
 Er startet keinen Scan. Danach PaperDock über das Anwendungsmenü oder mit
 `~/.local/bin/paperdock` öffnen.
 
-Der WLAN-Treiber ersetzt keine systemweite SANE-Bibliothek. Die Scanneradresse
-wird lokal eingerichtet; USB-Geräte verwenden weiter die regulären SANE-Treiber.
+**Für WLAN einmal die Scanneradresse unter Setup → Scanner / WLAN eintragen.**
+Die Adresse steht in der Geräteliste des Routers. Speichern und anschließend
+nach Geräten suchen; ein Neustart ist dafür nicht nötig. Der WLAN-Treiber
+ersetzt keine systemweite SANE-Bibliothek. USB-Geräte verwenden weiter die
+regulären SANE-Treiber.
 Optionen, Installationsprüfung, WLAN-Einrichtung und Deinstallation:
 [Installationsanleitung](docs/INSTALL.md).
 
@@ -188,6 +192,6 @@ Automatisierte Tests:
 python3 -m unittest discover -s tests -v
 ```
 
-Im letzten vollständigen Lauf bestanden alle **113 automatisierten Tests**. Sie prüfen Scan- und Bildverarbeitung mit kontrollierten Testdaten sowie HTTP-Abläufe gegen einen lokalen Testserver. Sie benötigen keine echte Paperless-Instanz und keinen echten Scanner. Sie ersetzen keine Prüfung des Papiereinzugs, der Firmware oder der Scanqualität.
+Im letzten vollständigen Lauf bestanden alle **133 automatisierten Tests**. Sie prüfen Scan- und Bildverarbeitung mit kontrollierten Testdaten sowie HTTP-Abläufe gegen einen lokalen Testserver. Sie benötigen keine echte Paperless-Instanz und keinen echten Scanner. Sie ersetzen keine Prüfung des Papiereinzugs, der Firmware oder der Scanqualität.
 
 **English overview:** PaperDock is an Apache-2.0 licensed early Linux scanning workspace with a local UI, SANE acquisition, local text-based orientation detection, configurable document names, image-PDF export and Paperless-ngx integration. Real iX1300 USB A4 simplex and experimental Wi-Fi simplex scans in color at 300 dpi succeeded, including PDF export. The Debian/Ubuntu-family installer builds the separate GPL-licensed experimental Wi-Fi module from pinned sources; no driver binary is bundled. Receipt of the USB scan in Paperless was confirmed by the user; independent OCR verification, duplex, recovery tests and the native window workflow remain pending. Contributions in English or German are welcome.
