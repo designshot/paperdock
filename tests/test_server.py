@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 from PIL import Image
 
+from paperdock import wifi
 from paperdock.paperless import PaperlessError
 from paperdock.server import AppError, Application, Server
 
@@ -375,6 +376,37 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(self.request("/api/jobs", "POST", "[]", authenticated=True)[0], 400)
         self.assertEqual(self.request("/api/jobs", "POST", "{}", headers={"Content-Type": "text/plain"}, authenticated=True)[0], 415)
         self.assertEqual(self.app.state()["jobs"], [])
+
+    def test_wifi_setup_routes_are_authenticated_and_do_not_probe_scanner(self):
+        prefix = Path(self.temp.name) / 'runtime'
+        release = prefix / 'releases/test'
+        module = release / 'wifi/build/lib/libsane-scansnap.so.1'
+        module.parent.mkdir(parents=True)
+        module.touch()
+        (prefix / 'install.json').write_text(json.dumps({'format': wifi.MARKER, 'prefix': str(prefix)}))
+        environment = wifi.launch_environment(prefix, release, {})
+        self.app.wifi = wifi.WifiSettings.from_environment(environment, system_config=Path(self.temp.name) / 'no-system')
+        self.assertEqual(self.request('/api/wifi')[0], 403)
+        self.assertEqual(self.request('/api/wifi', 'POST', {'address': '192.168.1.40'})[0], 403)
+        code, _, payload = self.request('/api/wifi', authenticated=True)
+        self.assertEqual(code, 200)
+        self.assertTrue(json.loads(payload)['available'])
+        self.assertFalse(json.loads(payload)['configured'])
+        with patch('paperdock.server.scanner.discover_devices') as discover:
+            code, _, payload = self.request('/api/wifi', 'POST', {'address': '192.168.1.40'}, authenticated=True)
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(payload)['address'], '192.168.1.40')
+            discover.assert_not_called()
+        code, _, payload = self.request('/api/state', authenticated=True)
+        self.assertEqual(json.loads(payload)['wifi']['address'], '192.168.1.40')
+        self.app.scan_lock.acquire()
+        try:
+            self.assertEqual(self.request('/api/wifi', 'POST', {'address': ''}, authenticated=True)[0], 409)
+        finally:
+            self.app.scan_lock.release()
+        code, _, payload = self.request('/api/wifi', 'POST', {'address': ''}, authenticated=True)
+        self.assertEqual(code, 200)
+        self.assertFalse(json.loads(payload)['configured'])
 
     def test_preferences_and_named_download_are_authenticated_and_utf8_safe(self):
         self.assertEqual(self.request('/api/preferences')[0], 403)

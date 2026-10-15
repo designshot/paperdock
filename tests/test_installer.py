@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -138,6 +139,33 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("keine Installation", result.stdout)
         self.assertEqual(list(self.root.iterdir()), [])
+
+    def test_source_installer_imports_shared_wifi_from_another_directory(self):
+        result = subprocess.run([sys.executable, str(SCRIPTS / "install.py"), "--help"],
+                                cwd=self.root, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--scanner-ip", result.stdout)
+
+    def test_installed_support_imports_shared_wifi_from_venv(self):
+        # Emulate the installed pure-Python package, without pip or downloads.
+        release = self.root / "release"
+        venv = release / "venv"
+        subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(venv)],
+                       check=True, capture_output=True)
+        python = venv / "bin/python"
+        library = Path(subprocess.check_output(
+            [str(python), "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], text=True).strip())
+        package = library / "paperdock"
+        package.mkdir()
+        for name in ("__init__.py", "wifi.py"):
+            shutil.copy2(SCRIPTS.parent / "paperdock" / name, package / name)
+        support = release / "support/install_runtime.py"
+        support.parent.mkdir()
+        shutil.copy2(SCRIPTS / "install_runtime.py", support)
+        result = subprocess.run([str(python), "-I", str(support), "--help"],
+                                cwd=self.root, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("launch", result.stdout)
 
     def test_offline_missing_inputs_fails_without_mutation(self):
         result = subprocess.run([sys.executable, str(SCRIPTS / "install.py"), "--offline", "--skip-system-packages", "--prefix", str(self.root / "runtime"), "--bin-dir", str(self.root / "bin"), "--desktop-dir", str(self.root / "apps")], text=True, capture_output=True)
